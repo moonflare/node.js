@@ -1,18 +1,25 @@
 const express = require("express");
-const mysql = require("mysql");
 const dotenv = require("dotenv");
 const db = require("./database");
 const app = express();
 dotenv.config();
 
-app.get('/', (req, res) => {
-  const id = req.query.id; // const { id } = req.query;
+app.use(express.json());
 
-  if (!id) {
-    return res.send("The `id` query param is required");
-  }
+app.get("/contacts/:id", (req, res) => {
+  const id = req.params.id;
 
-  const query = db.query('SELECT * FROM contacts WHERE id = ?', id, (err, results)=> {
+  db.query("SELECT * FROM contacts WHERE id = ?", id, (err, results) => {
+    if (err) {
+      console.error(err);
+    }
+
+    return res.send(results[0]);
+  });
+});
+
+app.get("/contacts", (req, res) => {
+  db.query("SELECT * FROM contacts", (err, results) => {
     if (err) {
       console.error(err);
     }
@@ -21,26 +28,58 @@ app.get('/', (req, res) => {
   });
 });
 
-app.get('/create', (req, res) => {
-  // const { name, phone } = req.query;
-  const name = req.query.name;
-  const phone = req.query.phone;
+app.post("/contacts", (req, res) => {
+  // const { name, phone } = req.body;
+  const name = req.body.name;
+  const phone = req.body.phone;
 
   if (!name || !phone) {
-    return res.send("The `name` and the `phone` query params are required");
+    return res.send("The `name` and the `phone` params are required");
   }
 
   const data = {
     name: name,
     phoneNumber: phone
-  }
+  };
 
-  const query = db.query('INSERT INTO contacts SET ?', data, (err, results) => {
+  db.query("INSERT INTO contacts SET ?", data, (err, results) => {
     if (err) {
       console.error(err);
     }
 
-    return res.send(`The latest created id is: ${results.insertId}`);
+    return res.send({ id: results.insertId });
+  });
+});
+
+app.put("/contacts/:id", (req, res) => {
+  const id = req.params.id;
+
+  // const { name, phone } = req.body;
+  const name = req.body.name;
+  const phone = req.body.phone;
+
+  if (!name || !phone) {
+    return res.send("The `name` and the `phone` params are required");
+  }
+
+  db.query("UPDATE contacts SET name = ?, phoneNumber = ? WHERE id = ?", [name, phone, id], (err, results) => {
+    if (err) {
+      console.error(err);
+    }
+
+    return res.send({ updated: results.affectedRows > 0 });
+  });
+});
+
+app.delete("/contacts/:id", (req, res) => {
+  const id = req.params.id;
+
+  db.query("DELETE FROM contacts WHERE id = ?", id, (err, results) => {
+    if (err) {
+      console.error(err);
+    }
+
+    return res.send({ deleted: results.affectedRows > 0 });
   });
 });
 
